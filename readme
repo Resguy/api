@@ -1,0 +1,207 @@
+------Ddos - UserInfo.cs
+
+using System.Text.Json.Serialization;
+
+namespace API.Dtos;
+
+public class UserInfo
+{
+    [JsonPropertyName("value")]
+    public string Value { get; set; } = "";
+}
+
+-------MainWindow.axaml
+
+
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="API.MainWindow"
+        Title="Валидация данных"
+        Width="600"
+        Height="210">
+
+    <Grid ColumnDefinitions="220,*"
+          RowDefinitions="70,70"
+          Margin="20">
+
+        <Button Grid.Row="0"
+                Grid.Column="0"
+                Content="Получить данные"
+                Click="BtnGetDataClick"/>
+
+        <TextBlock Grid.Row="0"
+                   Grid.Column="1"
+                   x:Name="TbFullName"
+                   Text="Данные не получены"
+                   VerticalAlignment="Center"
+                   Margin="20,0,0,0"/>
+
+        <Button Grid.Row="1"
+                Grid.Column="0"
+                Content="Отправить результат теста"
+                Click="BtnSendTestClick"/>
+
+        <TextBlock Grid.Row="1"
+                   Grid.Column="1"
+                   x:Name="TbIsValid"
+                   Text="Результат проверки"
+                   VerticalAlignment="Center"
+                   Margin="20,0,0,0"/>
+
+    </Grid>
+</Window>
+
+
+
+--------MainWindow.axaml.cs — В1 email
+
+
+using System;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
+using API.Dtos;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
+
+namespace API;
+
+public partial class MainWindow : Window
+{
+    private readonly HttpClient _httpClient = new();
+    private readonly string docPath = Path.Combine(AppContext.BaseDirectory, "ТестКейс.docx");
+
+    public MainWindow()
+    {
+        InitializeComponent();
+    }
+
+    private async void BtnGetDataClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var json = await _httpClient.GetStringAsync("http://127.0.0.1:4444/TransferSimulator/email");
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(json);
+
+            TbFullName.Text = userInfo?.Value ?? "";
+            TbIsValid.Text = "Данные получены";
+        }
+        catch
+        {
+            TbIsValid.Text = "Ошибка получения данных";
+        }
+    }
+
+    private void BtnSendTestClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(TbFullName.Text))
+            {
+                TbIsValid.Text = "Сначала получите данные";
+                return;
+            }
+
+            string value = TbFullName.Text;
+
+            bool check1 = value.Count(x => x == '@') == 1;
+
+            int index = value.IndexOf('@');
+            bool check2 = index >= 0 && value.IndexOf('.', index) > index;
+
+            bool isValid = check1 && check2;
+
+            TbIsValid.Text = isValid
+                ? "Корректная электронная почта"
+                : "Не корректная электронная почта";
+
+            WriteResults(check1, check2);
+        }
+        catch
+        {
+            TbIsValid.Text = "Ошибка проверки или записи";
+        }
+    }
+
+    private void WriteResults(bool check1, bool check2)
+    {
+        using var doc = WordprocessingDocument.Open(docPath, true);
+
+        var rows = doc.MainDocumentPart!.Document.Body!
+            .Elements<Table>().First()
+            .Elements<TableRow>().ToList();
+
+        SetResult(rows[^2], check1 ? "Успешно" : "Не успешно");
+        SetResult(rows[^1], check2 ? "Успешно" : "Не успешно");
+
+        doc.MainDocumentPart.Document.Save();
+    }
+
+    private void SetResult(TableRow row, string text)
+    {
+        var cell = row.Elements<TableCell>().ToList()[2];
+
+        cell.RemoveAllChildren<Paragraph>();
+
+        cell.Append(
+            new Paragraph(
+                new Run(
+                    new Text(text)
+                )
+            )
+        );
+    }
+}
+
+
+
+
+-----------API.csproj
+
+
+<ItemGroup>
+  <None Update="ТестКейс.docx">
+    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+  </None>
+</ItemGroup>
+
+--------------------
+
+
+-----В3 телефон-----
+
+Меняешь только ссылку:
+
+"http://127.0.0.1:4444/TransferSimulator/mobilePhone"
+
+И проверки:
+
+bool check1 = value.All(x => char.IsDigit(x) || x == '+' || x == '-' || x == ' ');
+bool check2 = value.Count(char.IsDigit) == 11;
+
+Сообщение:
+
+TbIsValid.Text = isValid
+    ? "Корректный номер телефона"
+    : "Не корректный номер телефона";
+    
+    
+---------В4 паспорт---------
+
+Ссылку берёшь из api_info.pdf. Обычно может быть:
+
+"http://127.0.0.1:4444/TransferSimulator/identityCard"
+
+Проверки:
+
+bool check1 = value.All(x => char.IsDigit(x) || x == ' ');
+bool check2 = value.Count(char.IsDigit) == 10;
+
+Сообщение:
+
+TbIsValid.Text = isValid
+    ? "Корректные серия и номер паспорта"
+    : "Не корректные серия и номер паспорта";
