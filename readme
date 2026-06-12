@@ -1,4 +1,4 @@
-------Ddos - UserInfo.cs
+------Dtos - UserInfo.cs
 
 using System.Text.Json.Serialization;
 
