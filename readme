@@ -73,6 +73,7 @@ public partial class MainWindow : Window
 {
     private readonly HttpClient _httpClient = new();
     private readonly string docPath = Path.Combine(AppContext.BaseDirectory, "ТестКейс.docx");
+    private int resultIndex = 0;
 
     public MainWindow()
     {
@@ -110,7 +111,10 @@ public partial class MainWindow : Window
             bool check1 = value.Count(x => x == '@') == 1;
 
             int index = value.IndexOf('@');
-            bool check2 = index >= 0 && value.IndexOf('.', index) > index;
+            bool check2 = check1 &&
+                          index >= 0 &&
+                          value.IndexOf('.', index) > index &&
+                          value.IndexOf('.', index) < value.Length - 1;
 
             bool isValid = check1 && check2;
 
@@ -118,7 +122,7 @@ public partial class MainWindow : Window
                 ? "Корректная электронная почта"
                 : "Не корректная электронная почта";
 
-            WriteResults(check1, check2);
+            WriteResult(isValid);
         }
         catch
         {
@@ -126,19 +130,27 @@ public partial class MainWindow : Window
         }
     }
 
-    private void WriteResults(bool check1, bool check2)
-{
-    using var doc = WordprocessingDocument.Open(docPath, true);
+    private void WriteResult(bool isValid)
+    {
+        using var doc = WordprocessingDocument.Open(docPath, true);
 
-    var rows = doc.MainDocumentPart!.Document.Body!
-        .Elements<Table>().First()
-        .Elements<TableRow>().ToList();
+        var rows = doc.MainDocumentPart!.Document.Body!
+            .Elements<Table>().First()
+            .Elements<TableRow>().ToList();
 
-    SetResult(rows[^2], check2 ? "Успешно" : "Не успешно");
-    SetResult(rows[^1], check1 ? "Успешно" : "Не успешно");
+        var dataRows = rows.TakeLast(2).ToList();
 
-    doc.MainDocumentPart.Document.Save();
-}
+        string result = isValid ? "Успешно" : "Не успешно";
+
+        SetResult(dataRows[resultIndex], result);
+
+        resultIndex++;
+
+        if (resultIndex >= dataRows.Count)
+            resultIndex = 0;
+
+        doc.MainDocumentPart.Document.Save();
+    }
 
     private void SetResult(TableRow row, string text)
     {
@@ -155,7 +167,6 @@ public partial class MainWindow : Window
         );
     }
 }
-
 
 
 
