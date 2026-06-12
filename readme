@@ -184,16 +184,16 @@ public partial class MainWindow : Window
 
 -----В3 телефон-----
 
-Меняешь только ссылку:
+Меняешь только ссылку: 29 строчка
 
 "http://127.0.0.1:4444/TransferSimulator/mobilePhone"
 
-И проверки:
+И проверки: с 55 по 59 строчку
 
 bool check1 = value.All(x => char.IsDigit(x) || x == '+' || x == '-' || x == ' ');
 bool check2 = value.Count(char.IsDigit) == 11;
 
-Сообщение:
+Сообщение: 63 по 65 строчку
 
 TbIsValid.Text = isValid
     ? "Корректный номер телефона"
@@ -202,16 +202,16 @@ TbIsValid.Text = isValid
     
 ---------В4 паспорт---------
 
-Ссылку берёшь из api_info.pdf. Обычно может быть:
+Ссылку берёшь из api_info.pdf. Обычно может быть: 29 строчка
 
 "http://127.0.0.1:4444/TransferSimulator/identityCard"
 
-Проверки:
+Проверки: с 55 по 59 строчку
 
 bool check1 = value.All(x => char.IsDigit(x) || x == ' ');
 bool check2 = value.Count(char.IsDigit) == 10;
 
-Сообщение:
+Сообщение: 63 по 65 строчку
 
 TbIsValid.Text = isValid
     ? "Корректные серия и номер паспорта"
