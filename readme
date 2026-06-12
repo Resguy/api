@@ -127,18 +127,18 @@ public partial class MainWindow : Window
     }
 
     private void WriteResults(bool check1, bool check2)
-    {
-        using var doc = WordprocessingDocument.Open(docPath, true);
+{
+    using var doc = WordprocessingDocument.Open(docPath, true);
 
-        var rows = doc.MainDocumentPart!.Document.Body!
-            .Elements<Table>().First()
-            .Elements<TableRow>().ToList();
+    var rows = doc.MainDocumentPart!.Document.Body!
+        .Elements<Table>().First()
+        .Elements<TableRow>().ToList();
 
-        SetResult(rows[^2], check1 ? "Успешно" : "Не успешно");
-        SetResult(rows[^1], check2 ? "Успешно" : "Не успешно");
+    SetResult(rows[^2], check2 ? "Успешно" : "Не успешно");
+    SetResult(rows[^1], check1 ? "Успешно" : "Не успешно");
 
-        doc.MainDocumentPart.Document.Save();
-    }
+    doc.MainDocumentPart.Document.Save();
+}
 
     private void SetResult(TableRow row, string text)
     {
