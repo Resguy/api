@@ -1,0 +1,815 @@
+Модуль 4. Авторизация с капчей, ролями и админ-панелью
+1. Создание проекта с нуля
+В Rider создать новый проект:
+New Solution → Avalonia Application
+Название проекта:
+DEMO
+Важно: в коде должно быть:
+namespace DEMO;
+Проект создавать на:
+net8.0
+________________________________________
+2. Создать папки
+В проекте создать папки:
+Models
+Windows
+Captcha
+В папку Captcha положить картинки капчи:
+1.png
+2.png
+3.png
+4.png
+Имена файлов должны быть именно такие.
+________________________________________
+3. Установить NuGet-пакеты
+В Rider:
+Dependencies → Add NuGet Package
+Поставить пакеты:
+Microsoft.EntityFrameworkCore
+Npgsql.EntityFrameworkCore.PostgreSQL
+MessageBox.Avalonia
+Avalonia.Controls.DataGrid
+Важно:
+Microsoft.EntityFrameworkCore ставить версии 8.0.x
+Npgsql.EntityFrameworkCore.PostgreSQL ставить версии 8.0.x
+MessageBox.Avalonia ставить 3.3.1
+Avalonia.Controls.DataGrid ставить 11.3.10
+Не ставить:
+Microsoft.EntityFrameworkCore 11 preview
+MessageBox.Avalonia 12
+Если в NuGet включена галочка:
+Prerelease
+лучше её выключить.
+________________________________________
+4. DEMO.csproj
+Открыть файл:
+DEMO.csproj
+Проверить, чтобы внутри <PropertyGroup> было:
+<AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+Если строки нет — добавить.
+Полный пример DEMO.csproj:
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.10" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.10" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.10" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.10" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.10" />
+
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.22" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
+    <PackageReference Include="MessageBox.Avalonia" Version="3.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Captcha\1.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Captcha\2.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Captcha\3.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Captcha\4.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
+Если Rider сам поставил немного другие версии 8.0.x, это нормально. Главное — не 11 preview.
+________________________________________
+5. App.axaml
+Файл App.axaml уже есть в проекте.
+Полностью заменить код:
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="DEMO.App"
+             RequestedThemeVariant="Default">
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+    </Application.Styles>
+</Application>
+________________________________________
+6. Models/AppDbContext.cs
+Создать файл:
+Models/AppDbContext.cs
+Код:
+using Microsoft.EntityFrameworkCore;
+
+namespace DEMO.Models;
+
+public class AppDbContext : DbContext
+{
+    public DbSet<User> Users => Set<User>();
+
+    public DbSet<Role> Roles => Set<Role>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=Demo");
+    }
+}
+Если пароль от PostgreSQL другой, заменить здесь:
+Password=postgres
+________________________________________
+7. Models/Role.cs
+Создать файл:
+Models/Role.cs
+Код:
+using System;
+using System.Collections.Generic;
+
+namespace DEMO.Models;
+
+public class Role
+{
+    public Guid Id { get; set; }
+
+    public string Name { get; set; } = "";
+
+    public List<User> Users { get; set; } = new();
+}
+________________________________________
+8. Models/User.cs
+Создать файл:
+Models/User.cs
+Код:
+using System;
+
+namespace DEMO.Models;
+
+public class User
+{
+    public Guid Id { get; set; }
+
+    public string LastName { get; set; } = "";
+
+    public string FirstName { get; set; } = "";
+
+    public string MiddleName { get; set; } = "";
+
+    public bool IsBlocked { get; set; }
+
+    public string Login { get; set; } = "";
+
+    public string Password { get; set; } = "";
+
+    public Guid RoleId { get; set; }
+
+    public Role? Role { get; set; }
+}
+________________________________________
+9. MainWindow.axaml
+Файл MainWindow.axaml уже есть в корне проекта.
+Полностью заменить код:
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DEMO.MainWindow"
+        Title="Авторизация"
+        Width="800"
+        Height="500"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid Margin="15"
+          RowDefinitions="45,45,35,*,50"
+          ColumnDefinitions="*,*">
+
+        <TextBlock Grid.Row="0"
+                   Grid.Column="0"
+                   Text="Логин"
+                   VerticalAlignment="Center"/>
+
+        <TextBox Grid.Row="0"
+                 Grid.Column="1"
+                 x:Name="TbLogin"/>
+
+        <TextBlock Grid.Row="1"
+                   Grid.Column="0"
+                   Text="Пароль"
+                   VerticalAlignment="Center"/>
+
+        <TextBox Grid.Row="1"
+                 Grid.Column="1"
+                 x:Name="TbPassword"
+                 PasswordChar="*"/>
+
+        <TextBlock Grid.Row="2"
+                   Grid.ColumnSpan="2"
+                   Text="Соберите изображение в правильном порядке"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"/>
+
+        <UniformGrid Grid.Row="3"
+                     Grid.ColumnSpan="2"
+                     Rows="2"
+                     Columns="2">
+
+            <Border x:Name="Cell0"
+                    Margin="2"
+                    BorderBrush="LightBlue"
+                    BorderThickness="2"
+                    DragDrop.AllowDrop="True"/>
+
+            <Border x:Name="Cell1"
+                    Margin="2"
+                    BorderBrush="LightBlue"
+                    BorderThickness="2"
+                    DragDrop.AllowDrop="True"/>
+
+            <Border x:Name="Cell2"
+                    Margin="2"
+                    BorderBrush="LightBlue"
+                    BorderThickness="2"
+                    DragDrop.AllowDrop="True"/>
+
+            <Border x:Name="Cell3"
+                    Margin="2"
+                    BorderBrush="LightBlue"
+                    BorderThickness="2"
+                    DragDrop.AllowDrop="True"/>
+
+        </UniformGrid>
+
+        <Button Grid.Row="4"
+                Grid.Column="0"
+                Content="Перемешать"
+                Click="ShuffleButton_Click"/>
+
+        <Button Grid.Row="4"
+                Grid.Column="1"
+                Content="Войти"
+                Click="EnterButton_Click"/>
+
+    </Grid>
+</Window>
+________________________________________
+10. MainWindow.axaml.cs
+Файл MainWindow.axaml.cs уже есть в корне проекта.
+Полностью заменить код:
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using DEMO.Models;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.IO;
+using System.Linq;
+using MsgBox = MsBox.Avalonia.MessageBoxManager;
+using MsgButton = MsBox.Avalonia.Enums.ButtonEnum;
+using MsgIcon = MsBox.Avalonia.Enums.Icon;
+
+namespace DEMO;
+
+public partial class MainWindow : Window
+{
+    private readonly AppDbContext _context = new();
+
+    private Border[] _cells = Array.Empty<Border>();
+
+    private Bitmap[] _images = Array.Empty<Bitmap>();
+
+    private int[] _orders = { 0, 1, 2, 3 };
+
+    private int failedAttempts = 0;
+
+    public MainWindow()
+    {
+        InitializeComponent();
+        LoadCaptcha();
+    }
+
+    private void LoadCaptcha()
+    {
+        _cells = new[] { Cell0, Cell1, Cell2, Cell3 };
+
+        string imageDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Captcha");
+
+        _images = Enumerable.Range(1, 4)
+            .Select(x => new Bitmap(Path.Combine(imageDirectory, $"{x}.png")))
+            .ToArray();
+
+        for (int i = 0; i < _cells.Length; i++)
+        {
+            int index = i;
+
+            _cells[i].PointerPressed += async (sender, e) =>
+            {
+                var data = new DataObject();
+                data.Set("CurrentIndex", index);
+                await DragDrop.DoDragDrop(e, data, DragDropEffects.Move);
+            };
+
+            _cells[i].AddHandler(DragDrop.DropEvent, (s, e) => OnDrop(index, e));
+            _cells[i].AddHandler(DragDrop.DragOverEvent, (s, e) => e.DragEffects = DragDropEffects.Move);
+        }
+
+        Shuffle();
+    }
+
+    private void Shuffle()
+    {
+        _orders = _orders.OrderBy(x => Guid.NewGuid()).ToArray();
+        DrawCaptcha();
+    }
+
+    private void DrawCaptcha()
+    {
+        for (int i = 0; i < _cells.Length; i++)
+        {
+            _cells[i].Child = new Image
+            {
+                Source = _images[_orders[i]],
+                Stretch = Stretch.Fill
+            };
+        }
+    }
+
+    private void OnDrop(int to, DragEventArgs e)
+    {
+        if (!e.Data.Contains("CurrentIndex"))
+            return;
+
+        int from = (int)e.Data.Get("CurrentIndex")!;
+
+        if (from == to)
+            return;
+
+        (_orders[from], _orders[to]) = (_orders[to], _orders[from]);
+
+        DrawCaptcha();
+    }
+
+    private void ShuffleButton_Click(object? sender, RoutedEventArgs e)
+    {
+        Shuffle();
+    }
+
+    private void EnterButton_Click(object? sender, RoutedEventArgs e)
+    {
+        Auth(TbLogin.Text, TbPassword.Text);
+    }
+
+    private void Auth(string? login, string? password)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(password))
+            {
+                MsgBox
+                    .GetMessageBoxStandard("Ошибка", "Логин и пароль являются обязательными полями.", MsgButton.Ok, MsgIcon.Info)
+                    .ShowWindowDialogAsync(this);
+
+                return;
+            }
+
+            var user = _context.Users
+                .Include(x => x.Role)
+                .SingleOrDefault(x => x.Login == login);
+
+            if (user == null || user.Password != password)
+            {
+                failedAttempts++;
+
+                MsgBox
+                    .GetMessageBoxStandard("Ошибка", "Вы ввели неверный логин или пароль. Пожалуйста проверьте ещё раз введенные данные.", MsgButton.Ok, MsgIcon.Info)
+                    .ShowWindowDialogAsync(this);
+
+                if (user != null)
+                    CheckBlock(user);
+
+                return;
+            }
+
+            if (user.IsBlocked)
+            {
+                MsgBox
+                    .GetMessageBoxStandard("Ошибка", "Вы заблокированы. Обратитесь к администратору.", MsgButton.Ok, MsgIcon.Info)
+                    .ShowWindowDialogAsync(this);
+
+                return;
+            }
+
+            if (!_orders.SequenceEqual(new[] { 0, 1, 2, 3 }))
+            {
+                failedAttempts++;
+                Shuffle();
+                CheckBlock(user);
+                return;
+            }
+
+            failedAttempts = 0;
+
+            MsgBox
+                .GetMessageBoxStandard("Информация", "Вы успешно авторизовались.", MsgButton.Ok, MsgIcon.Info)
+                .ShowWindowDialogAsync(this);
+
+            if (user.Role != null && user.Role.Name == "Админ")
+            {
+                new AdminPanel().Show();
+                Close();
+            }
+        }
+        catch
+        {
+            MsgBox
+                .GetMessageBoxStandard("Ошибка", "Произошла ошибка при авторизации.", MsgButton.Ok, MsgIcon.Error)
+                .ShowWindowDialogAsync(this);
+        }
+    }
+
+    private void CheckBlock(User user)
+    {
+        if (failedAttempts >= 3)
+        {
+            user.IsBlocked = true;
+            _context.SaveChanges();
+
+            MsgBox
+                .GetMessageBoxStandard("Ошибка", "Вы заблокированы. Обратитесь к администратору.", MsgButton.Ok, MsgIcon.Info)
+                .ShowWindowDialogAsync(this);
+        }
+    }
+}
+Жёлтые предупреждения про DataObject, DragDrop, DoDragDrop можно игнорировать. Это предупреждения, не ошибки.
+________________________________________
+11. Windows/AdminPanel.axaml
+Создать файл:
+Windows/AdminPanel.axaml
+Код:
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DEMO.AdminPanel"
+        Title="Админ панель"
+        Width="900"
+        Height="500"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <StackPanel Orientation="Horizontal"
+                    Margin="5"
+                    Spacing="5">
+
+            <Button Content="Добавить"
+                    Click="BtnAdd_Click"/>
+
+            <Button Content="Редактировать"
+                    Click="BtnUpdate_Click"/>
+
+            <Button Content="Снять блокировку"
+                    Click="BtnBlock_Click"/>
+
+        </StackPanel>
+
+        <DataGrid Grid.Row="1"
+                  x:Name="UsersGrid"
+                  AutoGenerateColumns="False"
+                  Margin="5">
+
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Фамилия" Binding="{Binding LastName}"/>
+                <DataGridTextColumn Header="Имя" Binding="{Binding FirstName}"/>
+                <DataGridTextColumn Header="Отчество" Binding="{Binding MiddleName}"/>
+                <DataGridTextColumn Header="Блокировка" Binding="{Binding IsBlocked}"/>
+                <DataGridTextColumn Header="Логин" Binding="{Binding Login}"/>
+                <DataGridTextColumn Header="Роль" Binding="{Binding Role.Name}"/>
+            </DataGrid.Columns>
+
+        </DataGrid>
+
+    </Grid>
+</Window>
+________________________________________
+12. Windows/AdminPanel.axaml.cs
+Создать файл:
+Windows/AdminPanel.axaml.cs
+Код:
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using DEMO.Models;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
+
+namespace DEMO;
+
+public partial class AdminPanel : Window
+{
+    private readonly AppDbContext _context = new();
+
+    public AdminPanel()
+    {
+        InitializeComponent();
+        Load();
+    }
+
+    private void Load()
+    {
+        UsersGrid.ItemsSource = _context.Users
+            .Include(x => x.Role)
+            .ToList();
+    }
+
+    private async void BtnAdd_Click(object? sender, RoutedEventArgs e)
+    {
+        var window = new UserWindow();
+        await window.ShowDialog(this);
+        Load();
+    }
+
+    private async void BtnUpdate_Click(object? sender, RoutedEventArgs e)
+    {
+        if (UsersGrid.SelectedItem is User currentUser)
+        {
+            var window = new UserWindow(currentUser);
+            await window.ShowDialog(this);
+            Load();
+        }
+    }
+
+    private void BtnBlock_Click(object? sender, RoutedEventArgs e)
+    {
+        if (UsersGrid.SelectedItem is User currentUser)
+        {
+            currentUser.IsBlocked = false;
+            _context.SaveChanges();
+            Load();
+        }
+    }
+}
+________________________________________
+13. Windows/UserWindow.axaml
+Создать файл:
+Windows/UserWindow.axaml
+Код:
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DEMO.UserWindow"
+        Title="Добавление/Редактирование пользователя"
+        Width="700"
+        Height="400"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid Margin="15"
+          RowDefinitions="45,45,45,45,45,45,50"
+          ColumnDefinitions="200,*">
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Фамилия" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="0" Grid.Column="1" x:Name="TbLastName" Text="{Binding LastName}"/>
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Имя" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="1" Grid.Column="1" x:Name="TbFirstName" Text="{Binding FirstName}"/>
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Отчество" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="2" Grid.Column="1" x:Name="TbMiddleName" Text="{Binding MiddleName}"/>
+
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="Логин" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="3" Grid.Column="1" x:Name="TbLogin" Text="{Binding Login}"/>
+
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="Пароль" VerticalAlignment="Center"/>
+        <TextBox Grid.Row="4" Grid.Column="1" x:Name="TbPassword" Text="{Binding Password}"/>
+
+        <TextBlock Grid.Row="5" Grid.Column="0" Text="Роль" VerticalAlignment="Center"/>
+        <ComboBox Grid.Row="5"
+                  Grid.Column="1"
+                  x:Name="CmbRoles"
+                  DisplayMemberBinding="{Binding Name}"/>
+
+        <Button Grid.Row="6"
+                Grid.Column="1"
+                Content="Сохранить"
+                Click="Button_Click"/>
+
+    </Grid>
+</Window>
+________________________________________
+14. Windows/UserWindow.axaml.cs
+Создать файл:
+Windows/UserWindow.axaml.cs
+Код:
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using DEMO.Models;
+using System;
+using System.Linq;
+using MsgBox = MsBox.Avalonia.MessageBoxManager;
+using MsgButton = MsBox.Avalonia.Enums.ButtonEnum;
+using MsgIcon = MsBox.Avalonia.Enums.Icon;
+
+namespace DEMO;
+
+public partial class UserWindow : Window
+{
+    private readonly AppDbContext _context = new();
+
+    private readonly User _currentUser;
+
+    public UserWindow(User? currentUser = null)
+    {
+        InitializeComponent();
+
+        CmbRoles.ItemsSource = _context.Roles.ToList();
+
+        _currentUser = currentUser ?? new User();
+
+        if (_currentUser.Role != null)
+        {
+            var userRole = _context.Roles.FirstOrDefault(r => r.Id == _currentUser.Role.Id);
+            CmbRoles.SelectedItem = userRole;
+        }
+        else
+        {
+            CmbRoles.SelectedIndex = 0;
+        }
+
+        DataContext = _currentUser;
+    }
+
+    private void Button_Click(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_currentUser.LastName) ||
+                string.IsNullOrWhiteSpace(_currentUser.FirstName) ||
+                string.IsNullOrWhiteSpace(_currentUser.MiddleName) ||
+                string.IsNullOrWhiteSpace(_currentUser.Login) ||
+                string.IsNullOrWhiteSpace(_currentUser.Password))
+            {
+                MsgBox
+                    .GetMessageBoxStandard("Ошибка", "Заполните все поля.", MsgButton.Ok, MsgIcon.Info)
+                    .ShowWindowDialogAsync(this);
+
+                return;
+            }
+
+            if (CmbRoles.SelectedItem is not Role selectedRole)
+            {
+                MsgBox
+                    .GetMessageBoxStandard("Ошибка", "Выберите роль.", MsgButton.Ok, MsgIcon.Info)
+                    .ShowWindowDialogAsync(this);
+
+                return;
+            }
+
+            if (_currentUser.Id == Guid.Empty)
+            {
+                bool isExistLogin = _context.Users.Any(x => x.Login == _currentUser.Login);
+
+                if (isExistLogin)
+                {
+                    MsgBox
+                        .GetMessageBoxStandard("Ошибка", "Данный логин есть в системе.", MsgButton.Ok, MsgIcon.Info)
+                        .ShowWindowDialogAsync(this);
+
+                    return;
+                }
+
+                _currentUser.Id = Guid.NewGuid();
+                _currentUser.RoleId = selectedRole.Id;
+                _currentUser.Role = selectedRole;
+
+                _context.Users.Add(_currentUser);
+            }
+            else
+            {
+                _currentUser.RoleId = selectedRole.Id;
+                _currentUser.Role = selectedRole;
+
+                _context.Users.Update(_currentUser);
+            }
+
+            _context.SaveChanges();
+            Close();
+        }
+        catch
+        {
+            MsgBox
+                .GetMessageBoxStandard("Ошибка", "Ошибка сохранения пользователя.", MsgButton.Ok, MsgIcon.Error)
+                .ShowWindowDialogAsync(this);
+        }
+    }
+}
+________________________________________
+15. SQL для pgAdmin
+В pgAdmin создать базу:
+Demo
+Потом открыть Query Tool и выполнить:
+CREATE TABLE "Roles" (
+    "Id" uuid PRIMARY KEY,
+    "Name" text NOT NULL
+);
+
+CREATE TABLE "Users" (
+    "Id" uuid PRIMARY KEY,
+    "LastName" text NOT NULL,
+    "FirstName" text NOT NULL,
+    "MiddleName" text NOT NULL,
+    "IsBlocked" boolean NOT NULL,
+    "Login" text NOT NULL,
+    "Password" text NOT NULL,
+    "RoleId" uuid NOT NULL REFERENCES "Roles"("Id")
+);
+
+CREATE UNIQUE INDEX "IX_Users_Login" ON "Users"("Login");
+
+INSERT INTO "Roles" ("Id", "Name") VALUES
+('11111111-1111-1111-1111-111111111111', 'Админ'),
+('22222222-2222-2222-2222-222222222222', 'Пользователь');
+
+INSERT INTO "Users" 
+("Id", "LastName", "FirstName", "MiddleName", "IsBlocked", "Login", "Password", "RoleId") 
+VALUES
+('33333333-3333-3333-3333-333333333333', 'Админов', 'Админ', 'Админович', false, 'admin', 'admin', '11111111-1111-1111-1111-111111111111'),
+('44444444-4444-4444-4444-444444444444', 'Пользователей', 'Пользователь', 'Пользователевич', false, 'user', 'user', '22222222-2222-2222-2222-222222222222');
+________________________________________
+16. Проверка
+Готовые пользователи:
+admin / admin
+user / user
+Для проверки лучше использовать:
+admin / admin
+Порядок проверки:
+1. Запустить проект.
+2. Ввести admin / admin.
+3. Собрать капчу в правильном порядке.
+4. Нажать "Войти".
+5. Должна открыться админ-панель.
+Проверка блокировки:
+1. Ввести неправильный пароль 3 раза.
+2. Пользователь должен заблокироваться.
+3. Войти под admin / admin.
+4. Выбрать пользователя.
+5. Нажать "Снять блокировку".
+________________________________________
+17. Частые ошибки
+Ошибка EntityFrameworkCore 11 preview
+Если пишет, что пакет несовместим с net8.0, значит поставлена версия 11 preview.
+Нужно ставить:
+Microsoft.EntityFrameworkCore 8.0.x
+Npgsql.EntityFrameworkCore.PostgreSQL 8.0.x
+________________________________________
+Ошибка MessageBox.Avalonia downgrade
+Если MessageBox ругается на Avalonia, нужно обновить Avalonia-пакеты до:
+11.3.10
+________________________________________
+Ошибка compiled binding
+Если пишет:
+Cannot parse a compiled binding without an explicit x:DataType
+В DEMO.csproj должно быть:
+<AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+________________________________________
+Ошибка Icon.Info / Icon.Error
+Не использовать старый вариант:
+MessageBoxManager
+ButtonEnum.Ok
+Icon.Info
+Icon.Error
+Использовать только новый вариант:
+using MsgBox = MsBox.Avalonia.MessageBoxManager;
+using MsgButton = MsBox.Avalonia.Enums.ButtonEnum;
+using MsgIcon = MsBox.Avalonia.Enums.Icon;
+И вызов:
+MsgBox
+    .GetMessageBoxStandard("Ошибка", "Текст ошибки", MsgButton.Ok, MsgIcon.Info)
+    .ShowWindowDialogAsync(this);
+________________________________________
+18. Главное для запоминания
+Модуль 4 = авторизация + капча + роли + блокировка + админ-панель.
+Главные файлы:
+Models/AppDbContext.cs — подключение к PostgreSQL
+Models/User.cs — пользователь
+Models/Role.cs — роль
+
+MainWindow.axaml — форма входа
+MainWindow.axaml.cs — логика входа и капчи
+
+Windows/AdminPanel.axaml — таблица пользователей
+Windows/AdminPanel.axaml.cs — добавление, редактирование, разблокировка
+
+Windows/UserWindow.axaml — форма пользователя
+Windows/UserWindow.axaml.cs — сохранение пользователя
+Главная база:
+Demo
+Главные таблицы:
+Users
+Roles
+Главные пользователи:
+admin / admin
+user / user
+Главное правило:
+3 ошибки → пользователь блокируется.
+Администратор может снять блокировку.
+
