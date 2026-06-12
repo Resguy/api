@@ -1,0 +1,90 @@
+Customers
+PK CustomersId
+Name
+INN
+PhoneNumber
+Salesman
+Buyer
+Addres
+
+_______________________
+
+Executors
+PK ExecutorsId
+Name
+INN
+PhoneNumber
+
+_______________________
+
+Orders
+PK OrdersId
+FK ExecutorId
+FK CustomerId
+
+_______________________
+
+OrderPositions
+PK, FK OrderId
+PK, FK ProductId
+Count
+
+_______________________
+
+Products
+PK ProductsId
+Code
+Count
+FK UnitTypeId
+FK MakerId
+
+_______________________
+
+ProductMaterials
+PK, FK ProductId
+PK, FK MaterialId
+Count
+
+_______________________
+
+Materials
+PK MaterialsId
+Code
+Count
+FK UnitTypeId
+FK MakerId
+Price
+
+_______________________
+
+
+UnitTypes
+PK UnitTypesId
+Name
+
+_______________________
+
+Makers
+PK MakersId
+Name
+INN
+PhoneNumber
+
+_______________________
+
+Связи между таблицами
+
+Customers 1 — M Orders  || PK CustomersId 1 — M Orders/FK CustomerId
+Executors 1 — M Orders  || PK ExecutorsId 1 — M Orders/FK ExecutorId
+
+Orders 1 — M OrderPositions  || PK OrdersId 1 — M OrderPositions/PK, FK OrderId
+Products 1 — M OrderPositions  || PK ProductsId 1 — M OrderPositions/PK, FK ProductId
+
+Products 1 — M ProductMaterials  || PK ProductsId 1 — M ProductMaterials/PK, FK ProductId
+Materials 1 — M ProductMaterials  || PK MaterialsId 1 — M ProductMaterials/PK, FK MaterialId
+
+UnitTypes 1 — M Products  || PK UnitTypesId 1 — M Products/FK UnitTypeId
+UnitTypes 1 — M Materials  || PK UnitTypesId 1 — M Materials/FK UnitTypeId
+
+Makers 1 — M Products  || PK MakersId 1 — M Products/FK MakerId
+Makers 1 — M Materials  || PK MakersId 1 — M Materials/FK MakerId
