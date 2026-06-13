@@ -438,7 +438,7 @@ public partial class MainWindow : Window
 Жёлтые предупреждения про DataObject, DragDrop, DoDragDrop можно игнорировать. Это предупреждения, не ошибки.
 ________________________________________
 11. Windows/AdminPanel.axaml
-Создать AdminPanel.axaml
+Создать File AdminPanel.axaml
 Код:
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -485,7 +485,7 @@ ________________________________________
 </Window>
 ________________________________________
 12. Windows/AdminPanel.axaml.cs
-Создать AdminPanel.axaml.cs
+Создать класс AdminPanel.axaml.cs
 Код:
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -541,7 +541,7 @@ public partial class AdminPanel : Window
 }
 ________________________________________
 13. Windows/UserWindow.axaml
-Создать UserWindow.axaml
+Создать File UserWindow.axaml
 Код:
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -585,7 +585,7 @@ ________________________________________
 </Window>
 ________________________________________
 14. Windows/UserWindow.axaml.cs
-Создать UserWindow.axaml.cs
+Создать класс UserWindow.axaml.cs
 Код:
 using Avalonia.Controls;
 using Avalonia.Interactivity;
