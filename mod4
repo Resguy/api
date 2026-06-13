@@ -103,8 +103,7 @@ ________________________________________
 </Application>
 ________________________________________
 6. Models/AppDbContext.cs
-Создать файл:
-Models/AppDbContext.cs
+Создать класс AppDbContext.cs
 Код:
 using Microsoft.EntityFrameworkCore;
 
@@ -125,8 +124,7 @@ public class AppDbContext : DbContext
 Password=postgres
 ________________________________________
 7. Models/Role.cs
-Создать файл:
-Models/Role.cs
+Создать класс Role.cs
 Код:
 using System;
 using System.Collections.Generic;
@@ -143,8 +141,7 @@ public class Role
 }
 ________________________________________
 8. Models/User.cs
-Создать файл:
-Models/User.cs
+Создать класс User.cs
 Код:
 using System;
 
@@ -447,8 +444,7 @@ public partial class MainWindow : Window
 Жёлтые предупреждения про DataObject, DragDrop, DoDragDrop можно игнорировать. Это предупреждения, не ошибки.
 ________________________________________
 11. Windows/AdminPanel.axaml
-Создать файл:
-Windows/AdminPanel.axaml
+Создать AdminPanel.axaml
 Код:
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -495,8 +491,7 @@ Windows/AdminPanel.axaml
 </Window>
 ________________________________________
 12. Windows/AdminPanel.axaml.cs
-Создать файл:
-Windows/AdminPanel.axaml.cs
+Создать AdminPanel.axaml.cs
 Код:
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -552,8 +547,7 @@ public partial class AdminPanel : Window
 }
 ________________________________________
 13. Windows/UserWindow.axaml
-Создать файл:
-Windows/UserWindow.axaml
+Создать UserWindow.axaml
 Код:
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -597,8 +591,7 @@ Windows/UserWindow.axaml
 </Window>
 ________________________________________
 14. Windows/UserWindow.axaml.cs
-Создать файл:
-Windows/UserWindow.axaml.cs
+Создать UserWindow.axaml.cs
 Код:
 using Avalonia.Controls;
 using Avalonia.Interactivity;
