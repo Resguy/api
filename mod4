@@ -22,14 +22,8 @@ Captcha
 Имена файлов должны быть именно такие.
 ________________________________________
 3. Установить NuGet-пакеты
-В Rider:
-Dependencies → Add NuGet Package
+Add NuGet Package
 Поставить пакеты:
-Microsoft.EntityFrameworkCore
-Npgsql.EntityFrameworkCore.PostgreSQL
-MessageBox.Avalonia
-Avalonia.Controls.DataGrid
-Важно:
 Microsoft.EntityFrameworkCore ставить версии 8.0.x
 Npgsql.EntityFrameworkCore.PostgreSQL ставить версии 8.0.x
 MessageBox.Avalonia ставить 3.3.1
