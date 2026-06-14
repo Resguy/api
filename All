@@ -174,7 +174,7 @@ WHERE o.OrderID = 1  -- Укажите нужный ID заказа
 GROUP BY o.OrderID;
 
 
-______________________________________________________________________________________
+_____________________________________________________________________________________________________________________
 
 Модуль 4. Авторизация с капчей, ролями и админ-панелью
 1. Создание проекта с нуля
@@ -1012,3 +1012,262 @@ ________________________________________________________________________________
 В программе предусмотрена обработка ошибок: пустые поля, неверный логин или пароль, неверная капча, заблокированный пользователь, повторяющийся логин и ошибка подключения к базе данных.
 Вывод: разработанный функционал обеспечивает авторизацию, проверку данных, блокировку пользователей и управление учетными записями администратора.
 
+______________________________________________________________________________________________________
+
+Модуль 5 САМЕЦ
+
+Разработанный программный модуль предназначен для входа пользователей в систему, проверки учетных данных и управления пользователями. В системе предусмотрено разделение прав доступа по ролям: Администратор и Пользователь.
+Окно авторизации содержит поля для ввода логина и пароля, а также кнопку входа. Перед выполнением авторизации проверяется, что оба поля заполнены. Если данные введены верно, пользователь получает доступ к системе и видит сообщение: «Вы успешно авторизовались». Если логин или пароль указаны неверно, выводится сообщение: «Вы ввели неверный логин или пароль. Пожалуйста проверьте ещё раз введенные данные».
+Для дополнительной защиты используется капча. Пользователь должен пройти проверку перед входом в систему. При трех неудачных попытках ввода пароля или неправильного прохождения капчи учетная запись блокируется. Для заблокированной учетной записи выводится сообщение: «Вы заблокированы. Обратитесь к администратору».
+Пользователь с ролью Администратор может добавлять новые учетные записи, изменять данные пользователей и снимать блокировку. При создании нового пользователя выполняется проверка уникальности логина.
+Используемые методы
+1.	CheckRequiredFields(login, password) — проверяет, заполнены ли логин и пароль.
+Параметры: login, password.
+2.	AuthorizeUser(login, password) — выполняет поиск пользователя по логину и паролю.
+Параметры: login, password.
+3.	CheckCaptcha() — проверяет правильность прохождения капчи.
+Параметры отсутствуют.
+4.	IncreaseFailedAttempts(userId) — увеличивает счетчик неудачных попыток входа.
+Параметр: userId.
+5.	BlockUser(userId) — устанавливает блокировку учетной записи.
+Параметр: userId.
+6.	ResetFailedAttempts(userId) — сбрасывает количество неудачных попыток.
+Параметр: userId.
+7.	AddUser(login, password, role) — добавляет нового пользователя.
+Параметры: login, password, role.
+8.	CheckLoginUnique(login) — проверяет, что логин не используется другим пользователем.
+Параметр: login.
+9.	UpdateUser(userId, login, password, role, isBlocked) — изменяет данные учетной записи.
+Параметры: userId, login, password, role, isBlocked.
+10.	UnblockUser(userId) — снимает блокировку с пользователя и сбрасывает ошибки входа.
+Параметр: userId.
+В программе предусмотрена обработка ошибок: пустые поля, неверные данные для входа, неправильная капча, заблокированная учетная запись, повторяющийся логин и ошибка подключения к базе данных.
+Вывод: реализованный модуль обеспечивает авторизацию пользователей, контроль доступа по ролям, защиту входа с помощью капчи, блокировку после неудачных попыток и администрирование учетных записей.
+
+__________________________________________________________________________________________________________
+
+
+------Dtos - UserInfo.cs
+
+using System.Text.Json.Serialization;
+
+namespace API.Dtos;
+
+public class UserInfo
+{
+    [JsonPropertyName("value")]
+    public string Value { get; set; } = "";
+}
+
+-------MainWindow.axaml
+
+
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="API.MainWindow"
+        Title="Валидация данных"
+        Width="600"
+        Height="210">
+
+    <Grid ColumnDefinitions="220,*"
+          RowDefinitions="70,70"
+          Margin="20">
+
+        <Button Grid.Row="0"
+                Grid.Column="0"
+                Content="Получить данные"
+                Click="BtnGetDataClick"/>
+
+        <TextBlock Grid.Row="0"
+                   Grid.Column="1"
+                   x:Name="TbFullName"
+                   Text="Данные не получены"
+                   VerticalAlignment="Center"
+                   Margin="20,0,0,0"/>
+
+        <Button Grid.Row="1"
+                Grid.Column="0"
+                Content="Отправить результат теста"
+                Click="BtnSendTestClick"/>
+
+        <TextBlock Grid.Row="1"
+                   Grid.Column="1"
+                   x:Name="TbIsValid"
+                   Text="Результат проверки"
+                   VerticalAlignment="Center"
+                   Margin="20,0,0,0"/>
+
+    </Grid>
+</Window>
+
+
+
+--------MainWindow.axaml.cs — В1 email
+
+
+using System;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
+using API.Dtos;
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
+
+namespace API;
+
+public partial class MainWindow : Window
+{
+    private readonly HttpClient _httpClient = new();
+    private readonly string docPath = Path.Combine(AppContext.BaseDirectory, "ТестКейс.docx");
+    private int resultIndex = 0;
+
+    public MainWindow()
+    {
+        InitializeComponent();
+    }
+
+    private async void BtnGetDataClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var json = await _httpClient.GetStringAsync("http://127.0.0.1:4444/TransferSimulator/email");
+            var userInfo = JsonSerializer.Deserialize<UserInfo>(json);
+
+            TbFullName.Text = userInfo?.Value ?? "";
+            TbIsValid.Text = "Данные получены";
+        }
+        catch
+        {
+            TbIsValid.Text = "Ошибка получения данных";
+        }
+    }
+
+    private void BtnSendTestClick(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(TbFullName.Text))
+            {
+                TbIsValid.Text = "Сначала получите данные";
+                return;
+            }
+
+            string value = TbFullName.Text;
+
+            bool check1 = value.Count(x => x == '@') == 1;
+
+            int index = value.IndexOf('@');
+            bool check2 = check1 &&
+                          index >= 0 &&
+                          value.IndexOf('.', index) > index &&
+                          value.IndexOf('.', index) < value.Length - 1;
+
+            bool isValid = check1 && check2;
+
+            TbIsValid.Text = isValid
+                ? "Корректная электронная почта"
+                : "Не корректная электронная почта";
+
+            WriteResult(isValid);
+        }
+        catch
+        {
+            TbIsValid.Text = "Ошибка проверки или записи";
+        }
+    }
+
+    private void WriteResult(bool isValid)
+    {
+        using var doc = WordprocessingDocument.Open(docPath, true);
+
+        var rows = doc.MainDocumentPart!.Document.Body!
+            .Elements<Table>().First()
+            .Elements<TableRow>().ToList();
+
+        var dataRows = rows.TakeLast(2).ToList();
+
+        string result = isValid ? "Успешно" : "Не успешно";
+
+        SetResult(dataRows[resultIndex], result);
+
+        resultIndex++;
+
+        if (resultIndex >= dataRows.Count)
+            resultIndex = 0;
+
+        doc.MainDocumentPart.Document.Save();
+    }
+
+    private void SetResult(TableRow row, string text)
+    {
+        var cell = row.Elements<TableCell>().ToList()[2];
+
+        cell.RemoveAllChildren<Paragraph>();
+
+        cell.Append(
+            new Paragraph(
+                new Run(
+                    new Text(text)
+                )
+            )
+        );
+    }
+}
+
+
+
+-----------API.csproj
+
+
+<ItemGroup>
+  <None Update="ТестКейс.docx">
+    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+  </None>
+</ItemGroup>
+
+--------------------
+
+В таблице по варианту один
+        Действие       | Ожидаемый результат
+_____________________________________________
+Валидация пользователя | Валидация ФИО
+_____________________________________________
+Валидация пользователя | Валидация ФИО
+
+-----В3 телефон-----
+
+Меняешь только ссылку: 29 строчка
+
+"http://127.0.0.1:4444/TransferSimulator/mobilePhone"
+
+И проверки: с 55 по 59 строчку
+
+bool check1 = value.All(x => char.IsDigit(x) || x == '+' || x == '-' || x == ' ');
+bool check2 = value.Count(char.IsDigit) == 11;
+
+Сообщение: 63 по 65 строчку
+
+TbIsValid.Text = isValid
+    ? "Корректный номер телефона"
+    : "Не корректный номер телефона";
+    
+    
+---------В4 паспорт---------
+
+Ссылку берёшь из api_info.pdf. Обычно может быть: 29 строчка
+
+"http://127.0.0.1:4444/TransferSimulator/identityCard"
+
+Проверки: с 55 по 59 строчку
+
+bool check1 = value.All(x => char.IsDigit(x) || x == ' ');
+bool check2 = value.Count(char.IsDigit) == 10;
+
+Сообщение: 63 по 65 строчку
+
+TbIsValid.Text = isValid
+    ? "Корректные серия и номер паспорта"
+    : "Не корректные серия и номер паспорта";
