@@ -1,33 +1,14 @@
-Customers
-PK CustomersId
+UnitTypes
+PK UnitTypesId
+Name
+
+_______________________
+
+Makers
+PK MakersId
 Name
 INN
 PhoneNumber
-Salesman
-Buyer
-Addres
-
-_______________________
-
-Executors
-PK ExecutorsId
-Name
-INN
-PhoneNumber
-
-_______________________
-
-Orders
-PK OrdersId
-FK ExecutorId
-FK CustomerId
-
-_______________________
-
-OrderPositions
-PK, FK OrderId
-PK, FK ProductId
-Count
 
 _______________________
 
@@ -57,20 +38,39 @@ Price
 
 _______________________
 
-
-UnitTypes
-PK UnitTypesId
+Customers
+PK CustomersId
 Name
+INN
+PhoneNumber
+Salesman
+Buyer
+Addres
 
 _______________________
 
-Makers
-PK MakersId
+OrderPositions
+PK, FK OrderId
+PK, FK ProductId
+Count
+
+_______________________
+
+Orders
+PK OrdersId
+FK ExecutorId
+FK CustomerId
+
+_______________________
+
+Executors
+PK ExecutorsId
 Name
 INN
 PhoneNumber
 
 _______________________
+
 
 Связи между таблицами
 
