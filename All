@@ -1,0 +1,174 @@
+UnitTypes
+PK UnitTypesId
+Name
+
+_______________________
+
+Makers
+PK MakersId
+Name
+INN
+PhoneNumber
+
+_______________________
+
+Products
+PK ProductsId
+Code
+Count
+FK UnitTypeId
+FK MakerId
+
+_______________________
+
+ProductMaterials
+PK, FK ProductId
+PK, FK MaterialId
+Count
+
+_______________________
+
+Materials
+PK MaterialsId
+Code
+Count
+FK UnitTypeId
+FK MakerId
+Price
+
+_______________________
+
+Customers
+PK CustomersId
+Name
+INN
+PhoneNumber
+Salesman
+Buyer
+Addres
+
+_______________________
+
+OrderPositions
+PK, FK OrderId
+PK, FK ProductId
+Count
+
+_______________________
+
+Orders
+PK OrdersId
+FK ExecutorId
+FK CustomerId
+
+_______________________
+
+Executors
+PK ExecutorsId
+Name
+INN
+PhoneNumber
+
+_______________________
+
+
+Связи между таблицами
+
+Customers 1 — M Orders  || PK CustomersId 1 — M Orders/FK CustomerId
+Executors 1 — M Orders  || PK ExecutorsId 1 — M Orders/FK ExecutorId
+
+Orders 1 — M OrderPositions  || PK OrdersId 1 — M OrderPositions/PK, FK OrderId
+Products 1 — M OrderPositions  || PK ProductsId 1 — M OrderPositions/PK, FK ProductId
+
+Products 1 — M ProductMaterials  || PK ProductsId 1 — M ProductMaterials/PK, FK ProductId
+Materials 1 — M ProductMaterials  || PK MaterialsId 1 — M ProductMaterials/PK, FK MaterialId
+
+UnitTypes 1 — M Products  || PK UnitTypesId 1 — M Products/FK UnitTypeId
+UnitTypes 1 — M Materials  || PK UnitTypesId 1 — M Materials/FK UnitTypeId
+
+Makers 1 — M Products  || PK MakersId 1 — M Products/FK MakerId
+Makers 1 — M Materials  || PK MakersId 1 — M Materials/FK MakerId
+
+______________________________________________________________________________________________________________
+
+CREATE TABLE Customers (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    inn VARCHAR(12),
+    Addres VARCHAR(200),
+    Phone VARCHAR(20) NOT NULL,
+    Salesman BOOLEAN NOT NULL,
+    Buyer BOOLEAN NOT NULL
+);
+
+CREATE TABLE UnitTypes(
+    UnitTypeID SERIAL PRIMARY KEY,
+    UnitTypesName VARCHAR(12) NOT NULL
+);
+
+CREATE TABLE Makers(
+	MakerID SERIAL PRIMARY KEY,
+	MakerName VARCHAR(50) NOT NULL,
+	INN VARCHAR(12) NOT NULL,
+	PhoneNumber VARCHAR(20) NOT NULL
+);
+
+CREATE TABLE Materials (
+    MaterialID SERIAL PRIMARY KEY,
+    Code VARCHAR(6) NOT NULL,
+    Quantity INT NOT NULL,
+	UnitTypeID INT REFERENCES UnitTypes(UnitTypeID),
+	MakerID INT REFERENCES Makers(MakerID),
+    Price DECIMAL(10, 2) NOT NULL
+);
+
+CREATE TABLE Products (
+	ProductID SERIAL PRIMARY KEY,
+	Code VARCHAR(6) NOT NULL,
+	Quantity INT NOT NULL,
+	UnitTypeID INT REFERENCES UnitTypes(UnitTypeID),
+	MakerID INT REFERENCES Makers(MakerID)
+);
+
+CREATE TABLE ProductMaterials (
+	ProductID INT REFERENCES Products(ProductID),
+	MaterialID INT REFERENCES Materials(MaterialID),
+	Quantity INT NOT NULL
+);
+
+CREATE TABLE Executors (
+	ExecutorID SERIAL PRIMARY KEY,
+	ExecutorName VARCHAR(50) NOT NULL,
+	INN VARCHAR(12) NOT NULL,
+	PhoneNumber VARCHAR(20) NOT NULL
+);
+
+CREATE TABLE Orders (
+    OrderID SERIAL PRIMARY KEY,
+	ExecutorID INT REFERENCES Executors(ExecutorID),
+	id INT REFERENCES Customers(id)
+);
+
+CREATE TABLE OrderPositions (
+	OrderID INT REFERENCES Orders(OrderID),
+	ProductID INT REFERENCES Products(ProductID),
+	Quantity INT NOT NULL
+);
+
+copy Customers(id, name, inn, addres, phone, salesman, buyer)
+from 'D:\SQL\Customers.csv'
+DELIMITER ';' 
+CSV HEADER;
+
+SELECT * FROM Customers;
+
+SELECT
+    o.OrderID,
+    SUM(pm.Quantity * m.Price) AS TotalOrderCost
+FROM Orders o
+JOIN OrderPositions op ON o.OrderID = op.OrderID
+JOIN Products p ON op.ProductID = p.ProductID
+JOIN ProductMaterials pm ON p.ProductID = pm.ProductID
+JOIN Materials m ON pm.MaterialID = m.MaterialID
+WHERE o.OrderID = 1  -- Укажите нужный ID заказа
+GROUP BY o.OrderID;
